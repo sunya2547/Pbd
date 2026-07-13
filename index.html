@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Happy Birthday พรีม!</title>
+    <style>
+        /* ธีมพื้นหลังตอนแรก (สไตล์ Windows 95 สี Teal) */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Tahoma', 'Arial', sans-serif;
+            background-color: #008080;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            transition: background-color 1s ease;
+        }
+
+        /* ธีมตอนนับถอยหลัง / ดูพลุ */
+        body.night-mode {
+            background-color: #000000;
+        }
+
+        /* Canvas สำหรับพลุ */
+        #fireworks-canvas {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* สไตล์กล่องข้อความ Windows 95 */
+        .win-box {
+            background: #c0c0c0;
+            border: 2px solid;
+            border-top-color: #ffffff;
+            border-left-color: #ffffff;
+            border-right-color: #000000;
+            border-bottom-color: #000000;
+            box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #808080;
+            padding: 2px;
+            width: 85%;
+            max-width: 300px;
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .title-bar {
+            background: #000080;
+            color: white;
+            padding: 3px 5px;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title-close {
+            background: #c0c0c0;
+            border: 2px solid;
+            border-top-color: #ffffff;
+            border-left-color: #ffffff;
+            border-right-color: #000000;
+            border-bottom-color: #000000;
+            font-weight: bold;
+            font-size: 10px;
+            padding: 1px 4px;
+            cursor: pointer;
+            color: black;
+        }
+
+        .content {
+            padding: 15px;
+            text-align: center;
+            font-size: 14px;
+            color: black;
+        }
+
+        input[type="date"] {
+            margin: 15px 0;
+            padding: 4px;
+            font-family: 'Tahoma', sans-serif;
+            border: 2px solid;
+            border-top-color: #808080;
+            border-left-color: #808080;
+            border-right-color: #ffffff;
+            border-bottom-color: #ffffff;
+            width: 80%;
+        }
+
+        button.win-btn {
+            background: #c0c0c0;
+            border: 2px solid;
+            border-top-color: #ffffff;
+            border-left-color: #ffffff;
+            border-right-color: #000000;
+            border-bottom-color: #000000;
+            padding: 5px 20px;
+            font-family: 'Tahoma', sans-serif;
+            font-size: 14px;
+            cursor: pointer;
+            color: black;
+            margin-top: 10px;
+        }
+
+        button.win-btn:active {
+            border-top-color: #000000;
+            border-left-color: #000000;
+            border-right-color: #ffffff;
+            border-bottom-color: #ffffff;
+            box-shadow: inset 1px 1px #808080;
+        }
+
+        /* ส่วนนับถอยหลังและฉากสุดท้าย */
+        #countdown-text {
+            font-size: 100px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 10px rgba(255,255,255,0.8);
+            display: none;
+            z-index: 20;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #final-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            text-align: center;
+            z-index: 20;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #final-screen h1 {
+            font-size: 32px;
+            text-shadow: 0 0 10px rgba(255,105,180,0.8);
+            margin-bottom: 10px;
+        }
+
+        .time-counter {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            line-height: 1.6;
+            text-shadow: 1px 1px 2px black;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ซ่อน Video YouTube ไว้ทำเป็น BGM -->
+    <div style="display:none;" id="youtube-player"></div>
+
+    <!-- พลุ -->
+    <canvas id="fireworks-canvas"></canvas>
+
+    <!-- Step 1: กล่องใส่วันเกิด -->
+    <div id="step1" class="win-box active">
+        <div class="title-bar">
+            <span>Message</span>
+            <button class="title-close">X</button>
+        </div>
+        <div class="content">
+            <p>กรุณายืนยันวันเกิดของคุณเพื่อเข้าใช้งาน:</p>
+            <input type="date" id="bday-input">
+            <br>
+            <button class="win-btn" onclick="startTroll()">Submit</button>
+        </div>
+    </div>
+
+    <!-- Step 2: กล่องข้อความกวนๆ (อุ้ย กดไม่โดน) -->
+    <div id="step2" class="win-box">
+        <div class="title-bar">
+            <span>Error</span>
+            <button class="title-close">X</button>
+        </div>
+        <div class="content">
+            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <!-- ไอคอน Error กากบาทสีแดง (สร้างจาก CSS) -->
+                <div style="background: red; color: white; border-radius: 50%; width: 25px; height: 25px; display: inline-flex; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; margin-right: 15px; flex-shrink: 0;">X</div>
+                <p id="troll-msg" style="margin: 0; text-align: left;">อุ้ย กดไม่โดน</p>
+            </div>
+            <button class="win-btn" onclick="nextTroll()">OK</button>
+        </div>
+    </div>
+
+    <!-- Step 3: Countdown & Final -->
+    <div id="countdown-text">3</div>
+    
+    <div id="final-screen">
+        <h1>Happy Birthday<br>to พรีม 🎂</h1>
+        <p>เรารู้จักกันมาแล้ว...</p>
+        <div class="time-counter" id="timer">
+            กำลังคำนวณ...
+        </div>
+    </div>
+
+    <!-- YouTube IFrame API Script -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        // --- ส่วนที่ 1: ตั้งค่า Youtube BGM ---
+        let player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtube-player', {
+                height: '0',
+                width: '0',
+                videoId: '0i4UH2lK4ag', // รหัสต่อท้าย URL ของคุณ
+                playerVars: {
+                    'autoplay': 0,
+                    'controls': 0,
+                    'loop': 1,
+                    'playlist': '0i4UH2lK4ag'
+                }
+            });
+        }
+
+        // --- ส่วนที่ 2: ตั้งค่าตัวแปรวันที่ (15 May 2017) ---
+        const metDate = new Date("2017-05-15T00:00:00"); 
+
+        let trollStep = 1;
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const trollMsg = document.getElementById('troll-msg');
+        const countdownText = document.getElementById('countdown-text');
+        const finalScreen = document.getElementById('final-screen');
+
+        function startTroll() {
+            const bday = document.getElementById('bday-input').value;
+            if(!bday) {
+                alert("กรุณาใส่วันเกิดก่อนครับ!");
+                return;
+            }
+
+            // เล่นเพลง (Play Music)
+            if(player && typeof player.playVideo === 'function') {
+                player.playVideo();
+            }
+
+            step1.classList.remove('active');
+            
+            setTimeout(() => {
+                moveBoxRandomly();
+                step2.classList.add('active');
+            }, 300);
+        }
+
+        function nextTroll() {
+            step2.classList.remove('active');
+            trollStep++;
+
+            if(trollStep === 2) {
+                trollMsg.innerText = "เมื่อไหร่จะโดน";
+                setTimeout(() => { moveBoxRandomly(); step2.classList.add('active'); }, 200);
+            } 
+            else if(trollStep === 3) {
+                trollMsg.innerText = "ครั้งสุดท้ายห่ะ";
+                setTimeout(() => { moveBoxRandomly(); step2.classList.add('active'); }, 200);
+            } 
+            else {
+                startCountdown();
+            }
+        }
+
+        function moveBoxRandomly() {
+            // สุ่มตำแหน่งให้อยู่ในหน้าจอ (10% ถึง 60%)
+            const randomX = Math.floor(Math.random() * 50) + 10;
+            const randomY = Math.floor(Math.random() * 60) + 10;
+            step2.style.left = randomX + '%';
+            step2.style.top = randomY + '%';
+        }
+
+        function startCountdown() {
+            // เปลี่ยนหน้าจอเป็นกลางคืน
+            document.body.classList.add('night-mode');
+            
+            // เริ่มจุดพลุ
+            document.getElementById('fireworks-canvas').style.display = 'block';
+            startFireworks();
+
+            countdownText.style.display = 'block';
+            let count = 3;
+            countdownText.innerText = count;
+
+            const interval = setInterval(() => {
+                count--;
+                if(count > 0) {
+                    countdownText.style.transform = 'scale(0.8)';
+                    setTimeout(() => {
+                        countdownText.innerText = count;
+                        countdownText.style.transform = 'scale(1.2)';
+                    }, 50);
+                } else {
+                    clearInterval(interval);
+                    countdownText.style.display = 'none';
+                    showFinalScreen();
+                }
+            }, 1000);
+        }
+
+        function showFinalScreen() {
+            finalScreen.style.display = 'flex';
+            setInterval(updateTimer, 1000);
+            updateTimer(); 
+        }
+
+        // --- ส่วนคำนวณเวลา ---
+        function updateTimer() {
+            const now = new Date();
+            let d = new Date(now);
+            
+            let y = d.getFullYear() - metDate.getFullYear();
+            let m = d.getMonth() - metDate.getMonth();
+            let dt = d.getDate() - metDate.getDate();
+
+            if (dt < 0) {
+                m--;
+                let temp = new Date(d.getFullYear(), d.getMonth(), 0);
+                dt += temp.getDate();
+            }
+            if (m < 0) {
+                y--;
+                m += 12;
+            }
+
+            let hr = d.getHours() - metDate.getHours();
+            if (hr < 0) { dt--; hr += 24; }
+            
+            let min = d.getMinutes() - metDate.getMinutes();
+            if (min < 0) { hr--; min += 60; }
+            
+            let sec = d.getSeconds() - metDate.getSeconds();
+            if (sec < 0) { min--; sec += 60; }
+
+            // รูปแบบ years:months:days:hours:minutes:seconds
+            document.getElementById('timer').innerHTML = 
+                `<b>${y}</b> years : <b>${m}</b> months : <b>${dt}</b> days : <br><b>${hr}</b> hours : <b>${min}</b> minutes : <b>${sec}</b> seconds`;
+        }
+
+        // --- ส่วนที่ 3: ระบบพลุ (Canvas Fireworks) ---
+        const canvas = document.getElementById('fireworks-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        let particles = [];
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        function createFirework(x, y) {
+            const particleCount = 60;
+            const hue = Math.random() * 360;
+            for (let i = 0; i < particleCount; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * (Math.random() * 10),
+                    vy: (Math.random() - 0.5) * (Math.random() * 10),
+                    color: `hsl(${hue}, 100%, 50%)`,
+                    alpha: 1,
+                    decay: Math.random() * 0.015 + 0.015
+                });
+            }
+        }
+
+        function startFireworks() {
+            function animate() {
+                requestAnimationFrame(animate);
+                // สร้าง Trail Effect
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'lighter';
+
+                particles.forEach((p, index) => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.05; // แรงโน้มถ่วง
+                    p.alpha -= p.decay;
+
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = Math.max(0, p.alpha);
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if (p.alpha <= 0) particles.splice(index, 1);
+                });
+
+                // สุ่มจุดพลุเรื่อยๆ
+                if (Math.random() < 0.04) {
+                    createFirework(Math.random() * canvas.width, Math.random() * (canvas.height * 0.6));
+                }
+            }
+            animate();
+        }
+    </script>
+</body>
+</html>
